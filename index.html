@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turbo Countdown 10: Furious Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;700;900&display=swap');
+
+        body {
+            background: #020202;
+            color: white;
+            font-family: 'Rajdhani', sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #number-display {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 32vw;
+            line-height: 1;
+            transition: all 0.1s ease;
+        }
+
+        /* Intense Screen Shake */
+        .shake-anim {
+            animation: intenseShake 0.25s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes intenseShake {
+            0%, 100% { transform: translate(0, 0); }
+            10% { transform: translate(-12px, 8px) rotate(-0.5deg); }
+            30% { transform: translate(12px, -8px) rotate(0.5deg); }
+            50% { transform: translate(-12px, -5px) rotate(-0.2deg); }
+            70% { transform: translate(12px, 8px) rotate(0.2deg); }
+            90% { transform: translate(-5px, -8px); }
+        }
+
+        /* Red Strobe for Critical Phase */
+        .strobe-bg {
+            animation: strobe 0.2s infinite;
+        }
+        @keyframes strobe {
+            0% { background: #020202; }
+            50% { background: #1a0000; }
+            100% { background: #020202; }
+        }
+
+        /* Heartbeat mode at 3, 2, 1 */
+        .heartbeat-pulse {
+            animation: heartbeat 0.4s ease-in-out infinite;
+        }
+        @keyframes heartbeat {
+            0% { transform: scale(1); filter: brightness(1); }
+            10% { transform: scale(1.08); filter: brightness(1.8); }
+            20% { transform: scale(1); filter: brightness(1); }
+            30% { transform: scale(1.04); filter: brightness(1.4); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+
+        .launch-green-glow {
+            text-shadow: 0 0 40px #34A853, 0 0 80px #34A853, 0 0 140px rgba(52, 168, 83, 0.8);
+            color: #ffffff;
+            animation: textPulse 2s infinite ease-in-out;
+        }
+        @keyframes textPulse {
+            0%, 100% { transform: scale(1); filter: brightness(1.2); }
+            50% { transform: scale(1.02); filter: brightness(1); }
+        }
+
+        /* Shift Light Bar */
+        .shift-segment {
+            height: 12px;
+            width: 35px;
+            background: #111;
+            border-radius: 3px;
+            transition: all 0.1s ease;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .shift-active-orange { background: #ff6a00; box-shadow: 0 0 15px #ff6a00; border-color: #fff; }
+        .shift-active-red { background: #ff0000; box-shadow: 0 0 25px #ff0000; border-color: #fff; }
+
+        /* Massive Logo Animation */
+        .logo-reveal {
+            animation: logoReveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes logoReveal {
+            0% { transform: scale(0.7) translateY(100px); opacity: 0; filter: blur(20px); }
+            100% { transform: scale(1) translateY(0); opacity: 1; filter: blur(0px); }
+        }
+
+        .glow-io {
+            text-shadow: 0 0 30px rgba(52, 168, 83, 0.9);
+        }
+    </style>
+</head>
+<body class="w-full h-screen flex flex-col items-center justify-center relative transition-colors duration-300" id="body-bg">
+
+    <canvas id="confetti" class="fixed inset-0 pointer-events-none z-50"></canvas>
+
+    <div id="app-wrapper" class="w-full h-full flex flex-col items-center justify-center relative px-4">
+        
+        <!-- CENTERED MASSIVE LOGO (LAUNCH ONLY) -->
+        <div id="io-logo" class="hidden absolute inset-0 flex flex-col items-center justify-center z-50 opacity-0 pointer-events-none">
+            <div class="flex flex-col items-center mb-12 w-full">
+                <div class="text-center w-full mb-6">
+                    <span class="text-white text-3xl md:text-5xl uppercase tracking-[0.4em] font-black drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]">Google Intelligence</span>
+                </div>
+                
+                <div class="flex items-center justify-center gap-6 md:gap-12">
+                    <span class="text-8xl md:text-[10rem] font-black tracking-tighter glow-io text-white">I / O</span>
+                    <div class="h-24 md:h-32 w-[4px] bg-[#34A853] shadow-[0_0_20px_#34A853]"></div>
+                    <span class="text-8xl md:text-[10rem] font-black text-[#34A853] tracking-tighter drop-shadow-[0_0_50px_#34A853]">2026</span>
+                </div>
+            </div>
+            
+            <div id="launch-text" class="hidden flex-col items-center justify-center w-full launch-green-glow">
+                <span class="font-black italic tracking-widest" style="font-family: 'Orbitron', sans-serif; font-size: min(14vw, 12vh);">LAUNCH</span>
+            </div>
+        </div>
+
+        <!-- Top HUD -->
+        <div id="hud-top" class="absolute top-10 flex justify-between w-full max-w-6xl px-12 items-end opacity-60">
+            <div class="flex flex-col border-l-4 border-orange-500 pl-4">
+                <span class="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-bold">Sequence Mode</span>
+                <span id="status-text" class="text-orange-500 font-black tracking-widest uppercase text-xl">System Ready</span>
+            </div>
+            <div class="flex flex-col items-end border-r-4 border-white pr-4">
+                <span class="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-bold">Core Load</span>
+                <span class="text-white font-black tracking-widest uppercase text-xl">Buffered</span>
+            </div>
+        </div>
+
+        <!-- Heavy Duty Shift Lights -->
+        <div class="absolute top-28 flex gap-2 z-30" id="shift-lights">
+            <div class="shift-segment"></div>
+            <div class="shift-segment"></div>
+            <div class="shift-segment"></div>
+            <div class="shift-segment"></div>
+            <div class="shift-segment"></div>
+            <div class="shift-segment"></div>
+            <div class="shift-segment"></div>
+            <div class="shift-segment"></div>
+            <div class="shift-segment"></div>
+            <div class="shift-segment"></div>
+        </div>
+
+        <!-- Dashboard Central -->
+        <div id="dash-core" class="relative w-[95vw] h-[95vw] max-w-[80vh] max-h-[80vh] flex items-center justify-center transition-all duration-1000">
+            <div id="gauge-bg" class="absolute inset-0 bg-gradient-to-tr from-zinc-950 via-zinc-900 to-zinc-950 border-[6px] border-zinc-800 rounded-full shadow-[inset_0_0_60px_rgba(0,0,0,1),0_0_100px_rgba(255,106,0,0.15)] z-0 transition-all duration-500"></div>
+            
+            <svg viewBox="0 0 200 200" class="absolute inset-0 w-full h-full pointer-events-none z-10">
+                <circle cx="100" cy="100" r="92" fill="none" stroke="#ffffff10" stroke-width="14" stroke-dasharray="433 578" style="transform: rotate(135deg); transform-origin: center;" />
+                <circle id="tacho-fill" cx="100" cy="100" r="92" fill="none" stroke="#ff6a00" stroke-width="12" stroke-linecap="butt" class="origin-center transition-all duration-150 ease-out" style="transform: rotate(135deg); stroke-dasharray: 0 578;" />
+                <g id="tacho-needle" class="transition-all duration-150 ease-out" style="transform: rotate(-135deg); transform-origin: 100px 100px;">
+                    <path d="M100 100 L100 10" stroke="currentColor" stroke-width="4" id="needle-path" class="text-orange-500" style="filter: drop-shadow(0 0 12px currentColor);" />
+                    <circle cx="100" cy="100" r="12" fill="#000" stroke="currentColor" stroke-width="3" />
+                </g>
+            </svg>
+
+            <div class="absolute inset-0 flex flex-col items-center justify-center z-20">
+                <div id="number-display" class="font-black tracking-tighter text-orange-500 drop-shadow-[0_0_40px_rgba(255,106,0,0.6)]">10</div>
+                <div id="speedo" class="absolute bottom-[20%] flex flex-col items-center">
+                    <span class="text-5xl font-black font-mono text-white/80" id="speed-val">00</span>
+                    <span class="text-[12px] uppercase font-black tracking-[0.3em] text-orange-500">BOOST / PSI</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="absolute bottom-12 z-40 flex flex-col items-center gap-6" id="controls">
+            <!-- Hidden button to handle initial click interaction -->
+            <button id="activate-voice" class="px-20 py-6 border-2 border-white/20 text-white/40 rounded-sm skew-x-[-15deg] transition-all hover:bg-white hover:text-black font-black text-2xl uppercase tracking-widest">
+                <div class="skew-x-[15deg]">Click to Enable Voice</div>
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        const tachoFill = document.getElementById('tacho-fill');
+        const tachoNeedle = document.getElementById('tacho-needle');
+        const numberDisplay = document.getElementById('number-display');
+        const gaugeBg = document.getElementById('gauge-bg');
+        const statusText = document.getElementById('status-text');
+        const speedVal = document.getElementById('speed-val');
+        const shiftLights = document.querySelectorAll('.shift-segment');
+        const needlePath = document.getElementById('needle-path');
+        const activateBtn = document.getElementById('activate-voice');
+        const appWrapper = document.getElementById('app-wrapper');
+        const ioLogo = document.getElementById('io-logo');
+        const dashCore = document.getElementById('dash-core');
+        const bodyBg = document.getElementById('body-bg');
+        const controls = document.getElementById('controls');
+        
+        let count = 10;
+        let isRunning = false;
+        let isRecognitionActive = false;
+        let audioCtx;
+        const sweepDegrees = 270;
+        const circumference = 2 * Math.PI * 92;
+        const maxArcLength = circumference * (sweepDegrees / 360);
+
+        // Voice Recognition Setup
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => { isRecognitionActive = true; };
+            recognition.onend = () => { isRecognitionActive = false; };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+                if ((transcript.includes('start') || transcript.includes('go') || transcript.includes('begin') || transcript.includes('launch')) && !isRunning) {
+                    startSequence();
+                }
+            };
+        }
+
+        function playFuriousSound() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+
+            const body = audioCtx.createOscillator();
+            const bodyGain = audioCtx.createGain();
+            body.frequency.setValueAtTime(180, now);
+            body.frequency.exponentialRampToValueAtTime(30, now + 0.15);
+            bodyGain.gain.setValueAtTime(0.8, now);
+            bodyGain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            body.connect(bodyGain); bodyGain.connect(audioCtx.destination);
+            body.start(); body.stop(now + 0.3);
+
+            const engine = audioCtx.createOscillator();
+            const engGain = audioCtx.createGain();
+            engine.type = 'sawtooth';
+            engine.frequency.setValueAtTime(40 + (10 - count) * 15, now);
+            engine.frequency.linearRampToValueAtTime(60 + (10 - count) * 20, now + 0.4);
+            engGain.gain.setValueAtTime(0.3, now);
+            engGain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+            engine.connect(engGain); engGain.connect(audioCtx.destination);
+            engine.start(); engine.stop(now + 0.5);
+        }
+
+        function playLaunchSuccessAudio() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const sweep = audioCtx.createOscillator();
+            const sweepGain = audioCtx.createGain();
+            sweep.type = 'sawtooth';
+            sweep.frequency.setValueAtTime(1200, now);
+            sweep.frequency.exponentialRampToValueAtTime(40, now + 1.2);
+            sweepGain.gain.setValueAtTime(0.3, now);
+            sweepGain.gain.exponentialRampToValueAtTime(0.01, now + 1.5);
+            sweep.connect(sweepGain); sweepGain.connect(audioCtx.destination);
+            sweep.start(); sweep.stop(now + 1.5);
+        }
+
+        function updateUI() {
+            const fraction = (10 - count) / 10;
+            const currentLength = maxArcLength * fraction;
+            tachoFill.style.strokeDasharray = `${currentLength} ${circumference}`;
+            const angle = -135 + (sweepDegrees * fraction);
+            tachoNeedle.style.transform = `rotate(${angle}deg)`;
+
+            if (count <= 3 && count > 0) {
+                tachoFill.setAttribute('stroke', '#ff0000');
+                numberDisplay.style.color = '#ff0000';
+                numberDisplay.style.filter = `drop-shadow(0 0 60px rgba(255,0,0,0.8))`;
+                needlePath.style.color = '#ff0000';
+                gaugeBg.style.boxShadow = `0 0 120px rgba(255,0,0,0.4)`;
+                statusText.textContent = "IGNITION SEQUENCE: IMMINENT";
+                statusText.style.color = '#ff0000';
+                numberDisplay.classList.add('heartbeat-pulse');
+                bodyBg.classList.add('strobe-bg');
+            }
+
+            speedVal.textContent = Math.floor(fraction * 99).toString().padStart(2, '0');
+
+            shiftLights.forEach((light, i) => {
+                if (i < (10 - count)) {
+                    light.classList.add(i < 7 ? 'shift-active-orange' : 'shift-active-red');
+                }
+            });
+        }
+
+        function runStep() {
+            if (count <= 0) {
+                launchSequence();
+                return;
+            }
+            
+            // UI Update first
+            numberDisplay.textContent = count;
+            playFuriousSound();
+            updateUI();
+            
+            // Screen shake effect
+            appWrapper.classList.remove('shake-anim');
+            void appWrapper.offsetWidth;
+            appWrapper.classList.add('shake-anim');
+
+            count--;
+
+            // Standard 1000ms (1 second) interval
+            setTimeout(runStep, 1000);
+        }
+
+        function startSequence() {
+            if (isRunning) return;
+            isRunning = true;
+            if (recognition && isRecognitionActive) {
+                try { recognition.stop(); } catch(e) {}
+            }
+            controls.style.display = 'none';
+            statusText.textContent = "IGNITION SEQUENCE: STARTED";
+            runStep();
+        }
+
+        function launchSequence() {
+            numberDisplay.classList.add('hidden');
+            document.getElementById('speedo').classList.add('hidden');
+            bodyBg.classList.remove('strobe-bg');
+            bodyBg.style.background = '#010502';
+            document.getElementById('launch-text').classList.replace('hidden', 'flex');
+            
+            tachoFill.setAttribute('stroke', '#34A853');
+            tachoFill.style.filter = 'drop-shadow(0 0 20px #34A853)';
+            needlePath.style.color = '#34A853';
+            gaugeBg.style.borderColor = '#34A853';
+            gaugeBg.style.boxShadow = '0 0 150px rgba(52, 168, 83, 0.2)';
+            dashCore.style.opacity = '0.1';
+            dashCore.style.transform = 'scale(0.6) translateY(150px)';
+            
+            ioLogo.classList.remove('hidden');
+            void ioLogo.offsetWidth;
+            ioLogo.classList.add('logo-reveal');
+
+            playLaunchSuccessAudio();
+            triggerEpicConfetti();
+            statusText.textContent = "I/O 2026: ENGINE LIVE";
+            statusText.style.color = "#34A853";
+        }
+
+        function triggerEpicConfetti() {
+            const canvas = document.getElementById('confetti');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const particles = [];
+            const colors = ['#34A853', '#ffffff', '#22c55e', '#a3e635', '#f8fafc'];
+            for (let i = 0; i < 500; i++) {
+                particles.push({
+                    x: canvas.width / 2, y: canvas.height / 2,
+                    vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.7) * 55,
+                    size: Math.random() * 12 + 4, color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: 1, weight: Math.random() * 0.1 + 0.03, rotation: Math.random() * 360, rotV: (Math.random() - 0.5) * 20
+                });
+            }
+            function anim() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach((p, i) => {
+                    p.x += p.vx; p.y += p.vy; p.vy += p.weight; p.vx *= 0.99; p.vy *= 0.99; p.rotation += p.rotV; p.alpha -= 0.0012; 
+                    ctx.save(); ctx.globalAlpha = p.alpha; ctx.translate(p.x, p.y); ctx.rotate(p.rotation * Math.PI / 180); ctx.fillStyle = p.color; ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size); ctx.restore();
+                    if(p.alpha <= 0) particles.splice(i, 1);
+                });
+                if(particles.length > 0) requestAnimationFrame(anim);
+            }
+            anim();
+        }
+
+        function activateSystem() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (recognition && !isRunning && !isRecognitionActive) {
+                try { 
+                    recognition.start(); 
+                } catch(e) {}
+                statusText.textContent = "System Ready";
+                controls.style.opacity = '0';
+                setTimeout(() => controls.style.display = 'none', 500);
+            }
+        }
+
+        activateBtn.addEventListener('click', activateSystem);
+        window.addEventListener('keydown', (e) => { 
+            activateSystem();
+            if((e.code === 'Space' || e.code === 'Enter') && !isRunning) startSequence(); 
+        });
+        window.addEventListener('mousedown', activateSystem);
+    </script>
+</body>
+</html>
